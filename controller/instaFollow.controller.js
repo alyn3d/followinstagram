@@ -1,27 +1,24 @@
-
-let Instagram = require('instagram-nodejs-without-api');
+const sleep = require('system-sleep');
+const Instagram = require('instagram-web-api');
 const username = process.env.INSTA_USER;
 const password = process.env.INSTA_PASS;
 
-Instagram = new Instagram();
+const client = new Instagram({ username, password });
 
-async function instaStuff(instaUser) {
-    Instagram.getCsrfToken().then((csrf) => {
-        Instagram.csrfToken = csrf;
-    }).then(() => {
-        return Instagram.auth(username, password).then(sessionId => {
-            Instagram.sessionId = sessionId
+async function followUserOnInsta(user) {
+    try {
+        await client.login();
+        sleep(500);
+        var theUserId = await client.getUserByUsername({ username: user });
+        var followId = theUserId.id;
+        await client.follow({ userId: followId })
+        console.log("Followed " + user + " with id: " + followId);
+        sleep(1000);
+    } catch (err) {
+        console.log('Fail!');
+        console.log(err);
+    }
 
-            return Instagram.getUserDataByUsername(instaUser).then((t) => {
-                console.log(t.graphql.user.id);
-                let userToFollowId = t.graphql.user.id;
-                Instagram.follow(userToFollowId, 0);
-                console.log("Followed " + instaUser + " with id: " + userToFollowId);
-                
-            })
-
-        })
-    }).catch(console.error);
 }
 
 module.exports = {
@@ -30,15 +27,15 @@ module.exports = {
         try {
             userTofollow = req.query.user;
             if (userTofollow) {
-                instaStuff(userTofollow);
+                followUserOnInsta(userTofollow);
             } else {
                 console.log("No parameter specified!");
             }
-            
+
         } catch (err) {
             next(err);
         }
 
         return res.send('Done!');
     },
-};
+}; 
